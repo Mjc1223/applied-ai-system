@@ -2,16 +2,12 @@
 Command line runner for the Music Recommender Simulation.
 
 This file helps you quickly run and test your recommender.
-
-You will implement the functions in recommender.py:
-- load_songs
-- score_song
-- recommend_songs
 """
 
+import os
 from typing import Dict, List, Tuple
 
-from .recommender import load_songs, recommend_songs
+from .recommender import generate_explanation, load_songs, recommend_songs
 
 
 def build_profiles() -> List[Tuple[str, Dict[str, object]]]:
@@ -65,13 +61,11 @@ def main() -> None:
 
         print(f"Profile: {profile_name}")
         print("-" * 40)
-        for index, (song, score, explanation) in enumerate(recommendations, start=1):
+        for index, (song, score, _) in enumerate(recommendations, start=1):
+            explanation = generate_explanation(profile, song, songs, api_key=os.getenv("OPENAI_API_KEY"))
             print(f"{index}. {song['title']}")
             print(f"   Score: {score:.2f}")
-            print("   Reasons:")
-            for reason in explanation.split("; "):
-                if reason:
-                    print(f"     - {reason}")
+            print(f"   Explanation: {explanation}")
             print()
 
 
