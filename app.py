@@ -1,6 +1,7 @@
 import os
 
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
 
 from src.recommender import generate_explanation, load_songs, recommend_songs
 
@@ -24,8 +25,8 @@ def test_openai_connection(api_key: str) -> tuple[bool, str]:
             temperature=0,
         )
         return True, "OpenAI connection successful."
-    except Exception:
-        return False, "OpenAI connection failed. Check key validity, quota, and network access."
+    except Exception as error:
+        return False, f"OpenAI connection failed: {type(error).__name__}"
 
 
 st.set_page_config(page_title="Music Recommender", page_icon="🎵", layout="wide")
@@ -64,10 +65,16 @@ with st.sidebar:
     st.caption("Set OPENAI_API_KEY to enable AI-generated explanations.")
 
     api_key = os.getenv("OPENAI_API_KEY", "")
+    try:
+        secret_key = st.secrets.get("OPENAI_API_KEY", "")
+        if secret_key:
+            api_key = secret_key
+    except (FileNotFoundError, StreamlitSecretNotFoundError):
+        pass
     if api_key:
-        st.success("OpenAI key detected in environment.")
+        st.success("OpenAI key detected.")
     else:
-        st.warning("OpenAI key not detected in environment.")
+        st.warning("OpenAI key not detected.")
 
     if st.button("Test OpenAI connection"):
         ok, message = test_openai_connection(api_key)
