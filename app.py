@@ -5,6 +5,29 @@ import streamlit as st
 from src.recommender import generate_explanation, load_songs, recommend_songs
 
 
+def test_openai_connection(api_key: str) -> tuple[bool, str]:
+    """Test whether the configured OpenAI key can successfully call the API."""
+    if not api_key:
+        return False, "OPENAI_API_KEY is not set."
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=api_key)
+        client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Connectivity check"},
+                {"role": "user", "content": "Reply with OK"},
+            ],
+            max_tokens=5,
+            temperature=0,
+        )
+        return True, "OpenAI connection successful."
+    except Exception:
+        return False, "OpenAI connection failed. Check key validity, quota, and network access."
+
+
 st.set_page_config(page_title="Music Recommender", page_icon="🎵", layout="wide")
 
 st.title("🎵 Music Recommender with RAG-style Explanations")
@@ -39,6 +62,19 @@ with st.sidebar:
     k = st.slider("Number of recommendations", 3, 10, 5, 1)
 
     st.caption("Set OPENAI_API_KEY to enable AI-generated explanations.")
+
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    if api_key:
+        st.success("OpenAI key detected in environment.")
+    else:
+        st.warning("OpenAI key not detected in environment.")
+
+    if st.button("Test OpenAI connection"):
+        ok, message = test_openai_connection(api_key)
+        if ok:
+            st.success(message)
+        else:
+            st.error(message)
 profile = {
     "favorite_genre": favorite_genre_display.lower() if favorite_genre_display else "",
     "favorite_mood": favorite_mood_display.lower() if favorite_mood_display else "",
@@ -60,7 +96,7 @@ for index, (song, score, _) in enumerate(recommendations, start=1):
             profile,
             song,
             songs,
-            api_key=os.getenv("OPENAI_API_KEY"),
+            api_key=api_key,
         )
         st.write("Explanation:")
         st.info(explanation)
