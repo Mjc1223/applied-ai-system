@@ -31,7 +31,7 @@ def test_openai_connection(api_key: str) -> tuple[bool, str]:
 
 st.set_page_config(page_title="Music Recommender", page_icon="🎵", layout="wide")
 
-st.title("🎵 Music Recommender with RAG-style Explanations")
+st.title("🎵 AI Music Recommender")
 
 if not os.path.exists("data/songs.csv"):
     st.error("The songs dataset was not found. Make sure data/songs.csv exists.")
