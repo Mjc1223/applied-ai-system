@@ -200,6 +200,8 @@ I ran the current test suite with `python -m pytest -v` and got:
 
 The existing tests in `tests/test_recommender.py` verify sorting behavior, explanation non-emptiness, retrieval prioritization for genre/mood, deterministic fallback behavior without an API key, and precision/validation helper outputs.
 
+Human Evaluation 
+
 | Profile | Top Result Relevant? | Explanation Grounded? | Unsupported Details? | No Crash? | Notes |
 | --- | --- | --- | --- | --- | --- |
 | High-energy pop | Yes | Yes | No observed | Yes | Top result: Sunrise City (4.42). Explanation matches genre, mood, and energy signals. |
