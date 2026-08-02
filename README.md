@@ -1,4 +1,4 @@
-# 🎵 Music Recommender Simulation
+# 🎵 VibePulse: An Applied AI Music Recommendation System
 
 ## Project Title
 
