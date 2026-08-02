@@ -109,7 +109,7 @@ python -m pytest
 
 ## Sample Interactions
 
-The examples below match the current dataset in `data/songs.csv` and the current recommendation behavior.
+The examples below match what the project was like before I included the AI systems with the current dataset in `data/songs.csv` and the current recommendation behavior.
 
 ### Example 1: High-Energy Pop
 
@@ -190,18 +190,136 @@ I added a deterministic fallback because I did not want the app to depend comple
 
 The main trade-off is that this design is reliable and simple, but not as flexible as a full embedding-based retrieval system. The current implementation is also limited by the small local dataset, so recommendation quality depends on the catalog itself.
 
-## Testing Summary
+## Reliability and Evaluation
 
-The current tests in `tests/test_recommender.py` verify the most important behavior in the recommender.
+I ran the current test suite with `python -m pytest -v` and got:
 
-- Recommendation ranking returns the expected top songs for a known profile.
-- Explanations are always returned as non-empty strings.
-- Retrieval context prioritizes matching genre and mood.
-- Fallback explanations work when no API key is available.
-- Evaluation helpers return useful precision metrics.
-- Validation helpers pass on strong matches.
+- Collected: 6 tests
+- Passed: 6
+- Failed: 0
 
-Testing improves reliability because it makes the recommendation behavior repeatable and helps catch regressions if the scoring, explanation, or evaluation logic changes later.
+The existing tests in `tests/test_recommender.py` verify sorting behavior, explanation non-emptiness, retrieval prioritization for genre/mood, deterministic fallback behavior without an API key, and precision/validation helper outputs.
+
+| Profile | Top Result Relevant? | Explanation Grounded? | Unsupported Details? | No Crash? | Notes |
+| --- | --- | --- | --- | --- | --- |
+| High-energy pop | Yes | Yes | No observed | Yes | Top result: Sunrise City (4.42). Explanation matches genre, mood, and energy signals. |
+| Chill lofi | Yes | Yes | No observed | Yes | Top result: Library Rain (4.50). Explanation reflects exact lofi/chill and energy alignment. |
+| Intense rock | Yes | Yes | No observed | Yes | Top result: Storm Runner (4.46). Explanation stays tied to retrieved song attributes. |
+| Conflicting preferences | Partially | Yes | No observed | Yes | Top result: Sunrise City (3.88). Genre/mood matches still dominate despite low target energy. |
+
+What worked: the ranking was stable and interpretable for coherent profiles, explanations remained readable, and deterministic fallback kept the app usable without OpenAI.
+
+Weaknesses or surprises: fixed weights can strongly favor category matches, so conflicting preferences can still surface high genre/mood matches even when another signal is weaker.
+
+Effects of fixed weights and small catalog: with a 20-song catalog and hard-coded bonuses, coverage and diversity are limited, and similar songs can repeat at the top.
+
+Fallback reliability: current behavior is robust because recommendations and deterministic explanations continue even when an API key is not present.
+
+Grounding of AI explanations: based on current deterministic runs and existing tests, explanation text stayed grounded in available song fields and did not introduce unsupported song titles.
+
+Future reliability improvements:
+
+- Add more edge-case tests for contradictory and sparse preference combinations.
+- Add mocked API failure tests for explanation-path error handling.
+- Add explicit grounding checks that compare explanation claims to retrieved song fields.
+- Add duplicate-title and unsupported-title checks in recommendation/explanation outputs.
+- Evaluate on a larger and more balanced catalog.
+- Add diversity checks to track repeated genre/mood concentration in top-k results.
+- Add precision@k evaluation on a richer labeled validation setup.
+
+## Reproducible Execution Evidence
+
+The following commands are the exact execution path used in this project for install, app runs, and tests:
+
+```bash
+pip install -r requirements.txt
+python -m streamlit run app.py
+python -m src.main
+python -m pytest -v
+```
+
+Verified test result:
+
+- `python -m pytest -v` -> 6 passed, 0 failed.
+
+Verified example runs (from the current catalog and scoring logic) With AI applied systems:
+
+### Example A: High-Energy Pop
+
+Input:
+
+- Favorite genre: `pop`
+- Desired mood: `happy`
+- Target energy: `0.90`
+- Likes acoustic songs: `False`
+
+Top recommendations:
+
+```text
+1. Sunrise City — Score: 4.42
+2. Gym Hero — Score: 3.47
+3. Rooftop Lights — Score: 2.36
+```
+
+Explanation:
+
+```text
+Sunrise City is a strong fit because it matches the user's favorite genre, it matches the user's preferred mood, its energy level closely fits the target.
+```
+
+Explanation source for this documented run: deterministic fallback (no OpenAI key required).
+
+### Example B: Chill Lofi
+
+Input:
+
+- Favorite genre: `lofi`
+- Desired mood: `chill`
+- Target energy: `0.35`
+- Likes acoustic songs: `True`
+
+Top recommendations:
+
+```text
+1. Library Rain — Score: 4.50
+2. Midnight Coding — Score: 4.43
+3. Focus Flow — Score: 3.45
+```
+
+Explanation:
+
+```text
+Library Rain is a strong fit because it matches the user's favorite genre, it matches the user's preferred mood, its energy level closely fits the target.
+```
+
+Explanation source for this documented run: deterministic fallback (no OpenAI key required).
+
+### Example C: API-Key-Enabled Streamlit Run (Ambient + Calm)
+
+Input:
+
+- Favorite genre: `ambient`
+- Desired mood: `calm`
+- Target energy: `0.80`
+- Likes acoustic songs: `False`
+
+Top recommendations:
+
+```text
+1. Spacewalk Thoughts — Score: 2.48
+2. Quiet Harbor — Score: 1.51
+3. Neon Skyline — Score: 1.49
+```
+
+Explanation:
+
+```text
+Spacewalk Thoughts is a strong fit because it matches the user's favorite genre.
+```
+
+Explanation source for this documented run: API-key-enabled path in Streamlit (key detected in app; explanation call was made with `api_key`, and the app returned the text above).
+
+Run stability note: each of the documented runs completed without crashing and used songs loaded from `data/songs.csv`.
 
 ## Reflection
 
