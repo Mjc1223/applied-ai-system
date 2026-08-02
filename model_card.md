@@ -30,13 +30,19 @@ This recommender works best for users with clear, consistent preferences for one
 
 ---
 
-## 6. Limitations and Bias 
+## 6. Limitations and Biases
 
-This system has important limitations because it only uses a few hand-crafted features and does not learn from real listening behavior. It does not consider lyrics, language, artist loyalty, listening context, skip history, or how tastes change over time, so it can miss why a listener actually likes a song. The small 20-song catalog also limits fairness and coverage across styles, and some genres or moods may have too few examples to compete consistently.
+This system has important limitations because the catalog is small (20 songs) and only represents a limited number of genres, moods, and artists from `data/songs.csv`. It uses weighted rules with strong fixed bonuses for exact genre and mood matches, so those category matches can be over-prioritized compared to more subtle musical similarity. In practice, this can create filter-bubble behavior where similar songs repeatedly surface and music discovery gets narrower.
 
-There is also clear filter-bubble risk in the current scoring logic. Because exact genre match (+2.0) and mood match (+1.0) are strong fixed bonuses, the model repeatedly pushes similar songs to the top and can keep reinforcing the same taste profile instead of introducing variety. Over time, this kind of rule can narrow what a user sees, reduce discovery across genres, and under-rank songs that are close in overall feel but use different labels.
+The model is also dependent on manually assigned song attributes, which can be incomplete or subjective. If a genre or mood label is too broad or inconsistent, the ranking can reflect labeling choices more than a listener's full intent. This system does not use listening history, skips, likes, replay behavior, changing preferences, lyrics, language, or cultural context, so it represents only a simplified snapshot of taste rather than a full listening profile.
 
-The weighting can also bias outcomes toward users whose preferences fit the available categories, while users with mixed or evolving tastes may receive weaker personalization. For example, a song with different genre tags but very close energy and emotional feel can still be ranked lower than a category match, which may unintentionally favor dominant labels in the dataset and disadvantage underrepresented styles.
+The OpenAI-assisted explanation path is also limited by what is retrieved from the local song records. Even when an AI explanation is available, it should be treated as a contextual summary of available metadata, not as an objective judgment of what music is "best."
+
+### 6.1 Potential Misuse and Prevention
+
+One realistic misuse is presenting recommendations as if they are universally correct or neutral, when they are actually produced by explicit weighting choices and a small catalog. Another risk is using unbalanced or biased catalog data and then interpreting those outputs as fair personalization. There is also operational risk if an API key is exposed, and content risk if generated explanations add unsupported details that are not grounded in retrieved song records. Finally, if personal listening data were added in future versions, over-aggressive user profiling could harm privacy and user trust.
+
+To reduce those risks, I ground explanations in retrieved song records and keep a deterministic fallback path so the app still provides transparent explanations without external generation. I also rely on basic validation in the app flow and tests to check core ranking and explanation behavior. For operational safety, API keys are kept in environment variables or ignored local secrets files (for example `.streamlit/secrets.toml` and `.env`) rather than hardcoded values. I avoid storing unnecessary personal user data in this project, document limitations clearly in this model card, and treat this as an educational system that would require stronger evaluation and human review before any production use.
 
 ---
 
@@ -188,6 +194,12 @@ Pairwise profile comparisons:
 5. Chill Lofi vs Conflicting Edge Case: Chill Lofi has coherent lofi/chill signals and therefore returns lofi-heavy results, but the conflicting profile mixes pop/happy labels with low energy and creates a more mixed top five. This makes sense because the conflicting profile pulls the scorer in two directions.
 6. Deep Intense Rock vs Conflicting Edge Case: Deep Intense Rock consistently rewards intense, high-energy songs, while the conflicting profile introduces lower-energy options and fewer intense tracks. This contrast is expected because their target energies are far apart (0.95 vs 0.20), even though both still rely on the same fixed category bonus structure.
 
+### 7.1 Reliability Testing Surprises
+
+While testing, one thing that surprised me was how much ranking changed when I changed feature weights. Small shifts in the weight design made visible differences in top results, which reinforced how sensitive this kind of recommender is to modeling choices. Another important result was the conflicting profile behavior: genre and mood matches could still rank highly even when energy was a weaker match, because category bonuses stayed strong.
+
+I also learned a reliability lesson from early development: my initial `Recommender` class draft returned songs in list order before ranking logic was fully implemented, which meant a simple test could appear to pass without proving the scoring behavior end to end. In the app layer, API key detection and Streamlit secrets handling also required careful testing because the app can still run through deterministic fallback explanations when no key is available. A recommendation list that "looks good" is not proof that the system is diverse, unbiased, or fully grounded, so I treat testing as ongoing rather than complete.
+
 ---
 
 ## 8. Future Work  
@@ -207,8 +219,16 @@ Additional recommendations to make this project stronger:
 
 ---
 
-## 9. Personal Reflection  
+## 9. Reflection and Ethics
 
-I learned that recommender systems are kind of controlled in a way and depending on how a particular recommender system is set up, will be dependent on how it operates. This was even surprising when I decided to test the different users and in the conflicting edge case profile it still ranked certain songs higher due to the constraints of the code being strong. For instance some songs still can rank high even if one feature is a poor match. This opened my eyes on how I vew music recommendation apps now, because they go based off of design choices within the apps and not neutral truth. This also shows that weighting features can favor familiarity over discovery and real systems need feedback loops, diversity controls, and fairness checks.
+### 9.1 Personal Reflection
 
-Using AI tools helped me speed up writing, structure my analysis, and compare profile outputs more clearly, especially when turning terminal results into readable reflections. I still had to verify AI-assisted content against actual code behavior and terminal output whenever numbers or ranking details were mentioned, because small wording mistakes can misrepresent what the model actually did. If I continued this project, I would expand profile features, add simple user-feedback updates over time, and introduce diversity-aware ranking so the system can stay personalized without repeatedly recommending the same style.
+I learned that recommender systems are heavily shaped by design choices, not neutral truth. In my own tests, the conflicting edge-case profile still pushed some genre/mood matches high in the ranking even when energy was less aligned, and that made me look at recommendation apps differently. It showed me how weighting can prioritize familiarity over discovery and why transparent scoring logic matters for responsible AI.
+
+I also learned that integrating AI into an existing system is mostly about boundaries. In this project, the weighted recommender makes the core ranking decisions, while the AI layer adds optional explanation support. That split improved reliability and user trust because recommendations still work even when external AI services are unavailable.
+
+### 9.2 Collaboration With AI
+
+AI was useful for drafting code options, debugging steps, documentation structure, and architecture ideas, but I still had to verify behavior against real files, run the app, run tests, and correct inaccurate suggestions. One helpful AI suggestion was replacing free-text genre and mood input with dropdowns populated from the actual CSV catalog. That improved usability and reduced invalid input because users now choose values that are guaranteed to exist in the local dataset.
+
+One flawed or incomplete AI direction early on was treating ordinary ranked CSV lookup as if it were automatically full RAG, or proposing broad architecture changes before checking the existing project structure and tests. I corrected that by reviewing the real repository first and by ensuring retrieved song records are actually used as explanation context in the implemented flow. This reminded me that human judgment is necessary to keep AI-assisted work accurate, safe, and aligned with responsible AI goals like transparency, reliability, and user trust.
